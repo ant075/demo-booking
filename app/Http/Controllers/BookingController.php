@@ -39,10 +39,11 @@ class BookingController extends Controller
             'ends_at' => $end_utc->toDateTimeString(),
         ]);
 
-        $conflict = DB::select("SELECT id FROM bookings
-            WHERE room_id = {$booking_data['room_id']}
-            AND starts_at <= '{$booking_data['ends_at']}'
-            AND ends_at >= '{$booking_data['starts_at']}'");
+        $conflict = DB::table('bookings')
+            ->where('room_id', '=', $validated['room_id'])
+            ->where('starts_at', '<=', $booking_data['ends_at'])
+            ->where('ends_at', '>=', $booking_data['starts_at'])
+            ->value('id');
 
         if ($conflict) {
             return response()->json(['error' => 'Комната занята'], 409);

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Booking;
+use App\Models\Office;
 use App\Models\Room;
 use App\Models\User;
 use Carbon\Carbon;
@@ -140,5 +141,85 @@ class BookingStoreTest extends TestCase
 
         $this->postJson('/api/bookings', $this->bookingPayload($freeRoom->id, $startsAt, $endsAt))
             ->assertCreated();
+    }
+
+    public function test_rejects_booking_when_ends_at_equals_starts_at(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $room = Room::factory()->create();
+
+        $startsAt = Carbon::create(2026, 11, 10, 10, 0, 0, 'UTC');
+        $endsAt = $startsAt->copy();
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertStatus(422)
+            ->assertJson(['error' => 'Booking ends_at must be greater than its starts_at']);
+    }
+
+    public function test_rejects_booking_when_ends_at_is_before_starts_at(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $room = Room::factory()->create();
+
+        $startsAt = Carbon::create(2026, 11, 10, 10, 0, 0, 'UTC');
+        $endsAt = $startsAt->copy()->subHour();
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertStatus(422)
+            ->assertJson(['error' => 'Booking ends_at must be greater than its starts_at']);
+    }
+
+    public function test_accepts_booking_within_office_local_hours_even_outside_utc_window(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        // Комната в офисе Europe/Moscow (+03:00): локально 09:00–10:00 — это 06:00–07:00 UTC,
+        // то есть вне рабочего окна по UTC, но внутри по времени офиса.
+        $room = Room::factory()->create();
+
+        $startsAt = Carbon::create(2026, 11, 10, 9, 0, 0, 'Europe/Moscow');
+        $endsAt = $startsAt->copy()->addHour();
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertCreated();
+    }
+
+    public function test_rejects_booking_outside_office_local_hours_even_within_utc_window(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        // Офис Asia/Novosibirsk (+07:00): 13:00 UTC — это 20:00 локально (уже нерабочее время),
+        // хотя 13:00 само по себе укладывалось бы в 9–20 по UTC.
+        $room = Room::factory()->for(Office::factory()->novosibirsk())->create();
+
+        $startsAt = Carbon::create(2026, 11, 10, 13, 0, 0, 'UTC');
+        $endsAt = $startsAt->copy()->addHour();
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertStatus(422)
+            ->assertJson(['error' => 'Нерабочее время']);
+    }
+
+    public function test_allows_booking_ending_exactly_at_office_local_20_00(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $room = Room::factory()->create();
+
+        $startsAt = Carbon::create(2026, 11, 10, 19, 0, 0, 'Europe/Moscow');
+        $endsAt = Carbon::create(2026, 11, 10, 20, 0, 0, 'Europe/Moscow');
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertCreated();
+    }
+
+    public function test_rejects_booking_ending_after_office_local_20_00_with_nonzero_minutes(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $room = Room::factory()->create();
+
+        $startsAt = Carbon::create(2026, 11, 10, 19, 0, 0, 'Europe/Moscow');
+        $endsAt = Carbon::create(2026, 11, 10, 20, 30, 0, 'Europe/Moscow');
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertStatus(422)
+            ->assertJson(['error' => 'Нерабочее время']);
     }
 }

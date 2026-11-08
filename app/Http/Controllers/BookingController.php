@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
 {
-    const string DATE_TIME_VALIDATION_RULES = 'required|date_format:' . DateTimeInterface::ATOM;
+    const string DATE_TIME_VALIDATION_RULES = 'required|date_format:'.DateTimeInterface::ATOM;
 
     public function index(Request $request)
     {
@@ -38,6 +38,9 @@ class BookingController extends Controller
             'starts_at' => $start_utc->toDateTimeString(),
             'ends_at' => $end_utc->toDateTimeString(),
         ]);
+        if ($end_utc->lessThanOrEqualTo($start_utc)) {
+            return response()->json(['error' => 'Booking ends_at must be greater than its starts_at'], 422);
+        }
 
         $conflict = DB::table('bookings')
             ->where('room_id', '=', $validated['room_id'])
@@ -49,7 +52,18 @@ class BookingController extends Controller
             return response()->json(['error' => 'Комната занята'], 409);
         }
 
-        if ($start_utc->hour < 9 || $start_utc->hour >= 20) {
+        // Проверим соответствие рабочему времени офиса
+        $office_tz = DB::table('rooms')
+            ->join('offices', 'rooms.office_id', '=', 'offices.id')
+            ->where('rooms.id', '=', $validated['room_id'])
+            ->value('offices.timezone');
+        // Считаем строковые метки временных зон офисов заведомо валидными.
+        // Т.к. их валидация уместна при сохранении записей офисов.
+        $start_office = $start_utc->tz($office_tz);
+        $end_office = $end_utc->tz($office_tz);
+        if ($start_office->hour < 9 || $start_office->hour >= 20 ||
+            $end_office->hour < 9 || $end_office->hour > 20 ||
+            ($end_office->hour == 20 && $end_office->minute > 0)) {
             return response()->json(['error' => 'Нерабочее время'], 422);
         }
 
@@ -74,7 +88,7 @@ class BookingController extends Controller
             ->whereDate('starts_at', today())
             ->get()
             ->map(fn ($b) => [
-                'time' => $b->starts_at . ' – ' . $b->ends_at,
+                'time' => $b->starts_at.' – '.$b->ends_at,
                 'author' => $b->user->name,
             ]);
     }

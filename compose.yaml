@@ -1,3 +1,4 @@
+name: "ant075-demo-booking"
 services:
   app:
     build: .

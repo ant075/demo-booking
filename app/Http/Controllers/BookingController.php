@@ -49,6 +49,26 @@ class BookingController extends Controller
         if ($delta_minutes % 15 !== 0) {
             return response()->json(['error' => 'Срок брони должен быть кратным 15 минутам'], 422);
         }
+        // Проверим соответствие рабочему времени офиса
+        $office_tz = DB::table('rooms')
+            ->join('offices', 'rooms.office_id', '=', 'offices.id')
+            ->where('rooms.id', '=', $validated['room_id'])
+            ->value('offices.timezone');
+        // Считаем строковые метки временных зон офисов заведомо валидными.
+        // Т.к. их валидация уместна при сохранении записей офисов.
+        $start_office = $start_utc->tz($office_tz);
+        $end_office = $end_utc->tz($office_tz);
+        if ($start_office->hour < 9 || $start_office->hour >= 20 ||
+            $end_office->hour < 9 || $end_office->hour > 20 ||
+            ($end_office->hour == 20 && $end_office->minute > 0)) {
+            return response()->json(['error' => 'Нерабочее время'], 422);
+        }
+        // Проверяем кратность начала и окончания 15 минутам во временной зоне офиса,
+        // т.к. бывают зоны, смещённые от UTC не на целый час.
+        if ($start_office->secondOfMinute() !== 0 || $end_office->secondOfMinute() !== 0 ||
+            $start_office->minuteOfHour() % 15 !== 0 || $end_office->minuteOfHour() % 15 !== 0) {
+            return response()->json(['error' => 'Начало и окончание брони допустимы в моменты, кратные целым 15 минутам'], 422);
+        }
 
         return DB::transaction(function () use ($validated, $booking_data, $start_utc, $end_utc) {
             // Сериализуем проверку конфликта и вставку для одной комнаты между параллельными запросами.
@@ -62,21 +82,6 @@ class BookingController extends Controller
 
             if ($conflict) {
                 return response()->json(['error' => 'Комната занята'], 409);
-            }
-
-            // Проверим соответствие рабочему времени офиса
-            $office_tz = DB::table('rooms')
-                ->join('offices', 'rooms.office_id', '=', 'offices.id')
-                ->where('rooms.id', '=', $validated['room_id'])
-                ->value('offices.timezone');
-            // Считаем строковые метки временных зон офисов заведомо валидными.
-            // Т.к. их валидация уместна при сохранении записей офисов.
-            $start_office = $start_utc->tz($office_tz);
-            $end_office = $end_utc->tz($office_tz);
-            if ($start_office->hour < 9 || $start_office->hour >= 20 ||
-                $end_office->hour < 9 || $end_office->hour > 20 ||
-                ($end_office->hour == 20 && $end_office->minute > 0)) {
-                return response()->json(['error' => 'Нерабочее время'], 422);
             }
 
             $booking = Booking::create($booking_data);

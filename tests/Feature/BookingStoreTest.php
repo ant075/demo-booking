@@ -236,6 +236,32 @@ class BookingStoreTest extends TestCase
             ->assertJson(['error' => 'Срок брони не должен превышать 4 часа']);
     }
 
+    public function test_rejects_booking_not_aligned_to_15_min(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $room = Room::factory()->create();
+
+        $startsAt = Carbon::create(2026, 11, 10, 12, 2, 0, 'Europe/Moscow');
+        $endsAt = Carbon::create(2026, 11, 10, 12, 17, 0, 'Europe/Moscow');
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertStatus(422)
+            ->assertJson(['error' => 'Начало и окончание брони допустимы в моменты, кратные целым 15 минутам']);
+    }
+
+    public function test_rejects_booking_with_seconds(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $room = Room::factory()->create();
+
+        $startsAt = Carbon::create(2026, 11, 10, 12, 0, 2, 'Europe/Moscow');
+        $endsAt = Carbon::create(2026, 11, 10, 12, 15, 2, 'Europe/Moscow');
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertStatus(422)
+            ->assertJson(['error' => 'Начало и окончание брони допустимы в моменты, кратные целым 15 минутам']);
+    }
+
     public function test_rejects_booking_not_a_multiple_of_15_minutes(): void
     {
         Sanctum::actingAs(User::factory()->create());

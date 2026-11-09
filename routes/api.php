@@ -8,5 +8,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])
         ->whereNumber('booking');
-    Route::get('/rooms/{room}/bookings/today', [BookingController::class, 'today']);
+    Route::get('/rooms/{room}/bookings/today', [BookingController::class, 'today'])
+        ->whereNumber('room');
 });

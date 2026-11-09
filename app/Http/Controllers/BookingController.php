@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 
 class BookingController extends Controller
@@ -75,9 +76,11 @@ class BookingController extends Controller
         return $booking;
     }
 
-    public function destroy($id)
+    public function destroy(Booking $booking)
     {
-        Booking::findOrFail($id)->delete();
+        Gate::authorize('delete', $booking);
+
+        $booking->delete();
 
         return response()->noContent();
     }

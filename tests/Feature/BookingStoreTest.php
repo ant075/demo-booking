@@ -248,4 +248,24 @@ class BookingStoreTest extends TestCase
             ->assertStatus(422)
             ->assertJson(['error' => 'Срок брони должен быть кратным 15 минутам']);
     }
+
+    public function test_allow_bookings_with_coinciding_boundaries(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $room = Room::factory()->create();
+        Booking::factory()->for($room)->create([
+            'starts_at' => Carbon::create(2026, 11, 10, 6, 0, 0, 'UTC'),
+            'ends_at' => Carbon::create(2026, 11, 10, 7, 0, 0, 'UTC'),
+        ]);
+        Booking::factory()->for($room)->create([
+            'starts_at' => Carbon::create(2026, 11, 10, 8, 0, 0, 'UTC'),
+            'ends_at' => Carbon::create(2026, 11, 10, 9, 0, 0, 'UTC'),
+        ]);
+
+        $startsAt = Carbon::create(2026, 11, 10, 10, 0, 0, 'Europe/Moscow');
+        $endsAt = Carbon::create(2026, 11, 10, 11, 0, 0, 'Europe/Moscow');
+
+        $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
+            ->assertCreated();
+    }
 }

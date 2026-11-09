@@ -52,8 +52,8 @@ class BookingController extends Controller
 
         $conflict = DB::table('bookings')
             ->where('room_id', '=', $validated['room_id'])
-            ->where('starts_at', '<=', $booking_data['ends_at'])
-            ->where('ends_at', '>=', $booking_data['starts_at'])
+            ->where('starts_at', '<', $booking_data['ends_at'])
+            ->where('ends_at', '>', $booking_data['starts_at'])
             ->value('id');
 
         if ($conflict) {

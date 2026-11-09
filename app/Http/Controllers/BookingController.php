@@ -40,7 +40,14 @@ class BookingController extends Controller
             'ends_at' => $end_utc->toDateTimeString(),
         ]);
         if ($end_utc->lessThanOrEqualTo($start_utc)) {
-            return response()->json(['error' => 'Booking ends_at must be greater than its starts_at'], 422);
+            return response()->json(['error' => 'Время окончания брони должно быть больше времени начала'], 422);
+        }
+        $delta_minutes = $start_utc->diffInMinutes($end_utc);
+        if ($delta_minutes > 240) {
+            return response()->json(['error' => 'Срок брони не должен превышать 4 часа'], 422);
+        }
+        if ($delta_minutes % 15 !== 0) {
+            return response()->json(['error' => 'Срок брони должен быть кратным 15 минутам'], 422);
         }
 
         $conflict = DB::table('bookings')

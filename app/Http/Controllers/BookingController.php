@@ -52,7 +52,7 @@ class BookingController extends Controller
         // Проверим соответствие рабочему времени офиса
         $office_tz = DB::table('rooms')
             ->join('offices', 'rooms.office_id', '=', 'offices.id')
-            ->where('rooms.id', '=', $validated['room_id'])
+            ->where('rooms.id', '=', $booking_data['room_id'])
             ->value('offices.timezone');
         // Считаем строковые метки временных зон офисов заведомо валидными.
         // Т.к. их валидация уместна при сохранении записей офисов.
@@ -70,14 +70,14 @@ class BookingController extends Controller
             return response()->json(['error' => 'Начало и окончание брони допустимы в моменты, кратные целым 15 минутам'], 422);
         }
 
-        return DB::transaction(function () use ($validated, $booking_data, $start_utc, $end_utc) {
+        return DB::transaction(function () use ($booking_data, $start_utc, $end_utc) {
             // Сериализуем проверку конфликта и вставку для одной комнаты между параллельными запросами.
             // Безопасная блокировка на уровне транзакции, а не сессии. Снимается автоматически как при COMMIT, так и при ROLLBACK.
             // Конкурентный запрос не отваливается, а ждёт.
-            DB::statement('SELECT pg_advisory_xact_lock(?)', [$validated['room_id']]);
+            DB::statement('SELECT pg_advisory_xact_lock(?)', [$booking_data['room_id']]);
 
             $conflict = DB::table('bookings')
-                ->where('room_id', '=', $validated['room_id'])
+                ->where('room_id', '=', $booking_data['room_id'])
                 ->where('starts_at', '<', $booking_data['ends_at'])
                 ->where('ends_at', '>', $booking_data['starts_at'])
                 ->value('id');

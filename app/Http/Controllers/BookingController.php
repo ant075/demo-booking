@@ -72,6 +72,8 @@ class BookingController extends Controller
 
         return DB::transaction(function () use ($validated, $booking_data, $start_utc, $end_utc) {
             // Сериализуем проверку конфликта и вставку для одной комнаты между параллельными запросами.
+            // Безопасная блокировка на уровне транзакции, а не сессии. Снимается автоматически как при COMMIT, так и при ROLLBACK.
+            // Конкурентный запрос не отваливается, а ждёт.
             DB::statement('SELECT pg_advisory_xact_lock(?)', [$validated['room_id']]);
 
             $conflict = DB::table('bookings')

@@ -1,7 +1,9 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -10,9 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Фильтр по user_id + сортировка по starts_at desc в index() — Blueprint не умеет
-        // задавать направление сортировки по столбцу индекса, поэтому создаём сырым SQL.
-        DB::statement('create index bookings_user_id_starts_at_index on bookings (user_id, starts_at desc)');
+        Schema::table('bookings', function (Blueprint $table) {
+            $table->index(['user_id', DB::raw('starts_at desc')], 'bookings_user_id_starts_at_desc_index');
+        });
     }
 
     /**
@@ -20,6 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement('drop index bookings_user_id_starts_at_index');
+        Schema::table('bookings', function (Blueprint $table) {
+            $table->dropIndex('bookings_user_id_starts_at_desc_index');
+        });
     }
 };

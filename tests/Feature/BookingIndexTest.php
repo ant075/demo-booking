@@ -4,13 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\Booking;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class BookingIndexTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     public function test_returns_only_own_bookings(): void
     {

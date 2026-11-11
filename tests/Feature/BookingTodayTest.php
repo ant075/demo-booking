@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class BookingTodayTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     public function test_non_numeric_room_id_returns_not_found(): void
     {

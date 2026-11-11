@@ -7,14 +7,14 @@ use App\Models\Office;
 use App\Models\Room;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class BookingStoreTest extends TestCase
 {
-    use RefreshDatabase;
+    use LazilyRefreshDatabase;
 
     private function bookingPayload(int $roomId, Carbon $startsAt, Carbon $endsAt, array $overrides = []): array
     {

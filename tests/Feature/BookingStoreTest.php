@@ -75,7 +75,7 @@ class BookingStoreTest extends TestCase
         Sanctum::actingAs(User::factory()->create());
 
         $this->postJson('/api/bookings', [])
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJsonValidationErrors(['room_id', 'starts_at', 'ends_at', 'title']);
     }
 
@@ -86,7 +86,7 @@ class BookingStoreTest extends TestCase
         $startsAt = Carbon::create(2026, 11, 10, 12, 0, 0, 'UTC');
 
         $this->postJson('/api/bookings', $this->bookingPayload(999999, $startsAt, $startsAt->copy()->addHour()))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJsonValidationErrors(['room_id']);
     }
 
@@ -101,7 +101,7 @@ class BookingStoreTest extends TestCase
             'ends_at' => '2026-11-10 13:00:00',
             'title' => 'Встреча',
         ])
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJsonValidationErrors(['starts_at', 'ends_at']);
     }
 
@@ -120,7 +120,7 @@ class BookingStoreTest extends TestCase
         $endsAt = $startsAt->copy()->addHour();
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(409)
+            ->assertConflict()
             ->assertJson(['error' => 'Комната занята']);
     }
 
@@ -152,7 +152,7 @@ class BookingStoreTest extends TestCase
         $endsAt = $startsAt->copy();
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJson(['error' => 'Время окончания брони должно быть больше времени начала']);
     }
 
@@ -165,7 +165,7 @@ class BookingStoreTest extends TestCase
         $endsAt = $startsAt->copy()->subHour();
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJson(['error' => 'Время окончания брони должно быть больше времени начала']);
     }
 
@@ -194,7 +194,7 @@ class BookingStoreTest extends TestCase
         $endsAt = $startsAt->copy()->addHour();
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJson(['error' => 'Нерабочее время']);
     }
 
@@ -219,7 +219,7 @@ class BookingStoreTest extends TestCase
         $endsAt = Carbon::create(2026, 11, 10, 20, 30, 0, 'Europe/Moscow');
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJson(['error' => 'Нерабочее время']);
     }
 
@@ -232,7 +232,7 @@ class BookingStoreTest extends TestCase
         $endsAt = Carbon::create(2026, 11, 10, 16, 30, 0, 'Europe/Moscow');
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJson(['error' => 'Срок брони не должен превышать 4 часа']);
     }
 
@@ -245,7 +245,7 @@ class BookingStoreTest extends TestCase
         $endsAt = Carbon::create(2026, 11, 10, 12, 17, 0, 'Europe/Moscow');
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJson(['error' => 'Начало и окончание брони допустимы в моменты, кратные целым 15 минутам']);
     }
 
@@ -258,7 +258,7 @@ class BookingStoreTest extends TestCase
         $endsAt = Carbon::create(2026, 11, 10, 12, 15, 2, 'Europe/Moscow');
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJson(['error' => 'Начало и окончание брони допустимы в моменты, кратные целым 15 минутам']);
     }
 
@@ -271,7 +271,7 @@ class BookingStoreTest extends TestCase
         $endsAt = Carbon::create(2026, 11, 10, 12, 40, 0, 'Europe/Moscow');
 
         $this->postJson('/api/bookings', $this->bookingPayload($room->id, $startsAt, $endsAt))
-            ->assertStatus(422)
+            ->assertUnprocessable()
             ->assertJson(['error' => 'Срок брони должен быть кратным 15 минутам']);
     }
 
